@@ -1,0 +1,28 @@
+name: CI-CD
+
+# Define o evento que deve disparar a pipeline. Um commit na branch main irá disparar esta pipeline.
+on: 
+  push: 
+    branches: ["main"]
+
+jobs:
+  CI:
+    # Define o runner
+    runs-on: ubuntu-latest
+
+    steps:
+      # ???
+      - uses: actions/checkout@v6.0.2
+      # Criação da imagem docker
+      - name: Criação da imagem docker
+        uses: docker/build-push-action@v7.1.0
+        with:
+           # Define o diretório que contém o Dockerfile
+          context: ./src
+          file: ./serc/Dockerfile
+          push: true
+          # Define o nome da imagem a ser criada
+          tags: |
+            ldesordi/live-kube-news:v1
+            ldesordi/live-kube-news:latest
+      
