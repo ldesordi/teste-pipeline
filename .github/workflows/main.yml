@@ -1,3 +1,5 @@
+# Arquivo que define a pipeline de CI-CD
+
 name: CI-CD
 
 # Define o evento que deve disparar a pipeline. Um commit na branch main irá disparar esta pipeline.
@@ -13,6 +15,15 @@ jobs:
     steps:
       # ???
       - uses: actions/checkout@v6.0.2
+
+      # Para subir a imagem para o Docker Hub é necessário definir um usuário.
+      - name: Autenticação no Docker Hub
+        uses: docker/login-action@v4.1.0
+        # Utiliza o github secrets para mascarar o usuário e senha
+        with:
+          username: ${{secrets.DOCKERHUB_USER}}
+          password: ${{secrets.DOCKERHUB_PASSWORD}}
+      
       # Criação da imagem docker
       - name: Criação da imagem docker
         uses: docker/build-push-action@v7.1.0
