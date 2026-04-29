@@ -60,3 +60,5 @@ jobs:
       # Envia o código para o servidor remoto através de SCP que usa SSH
       - name: Deploy using SCP
         run: scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa -r ./dist/* ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
+      # Acessa o servidor através de SSH, instala as dependências e reinicia o processo
+        run: scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
