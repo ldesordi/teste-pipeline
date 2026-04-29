@@ -51,9 +51,9 @@ jobs:
       - name: Push da imagem para o registry
         run: podman push ghcr.io/${{ github.repository }}: latest
 
-  CD:
+  deploy:
     # Define que o CD só será executado depoi do CI ter finalizado.
-    meeds: [CI]
+    meeds: build-and-push
     runs-on: ubuntu-latest
     steps:
       # Adiciona o código em um ambiente virtual
