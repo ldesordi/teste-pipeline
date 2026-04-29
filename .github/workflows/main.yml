@@ -8,6 +8,10 @@ on:
   # O push define que um commit na branch main irá iniciar esta pipeline.
   push: 
     branches: ["main"]
+# Define variáveis de ambiente
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 # Define as tarefas do workflow
 jobs:
@@ -15,60 +19,70 @@ jobs:
     # Define o sistema operacional onde o job deve ser executado.
     runs-on: ubuntu-latest
     # ???
-    permissions: write
-    contents: read
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image_tag: ${{ steps.meta.outputs.version }}
 
     # Define as etapas do job.
     steps:
       # Adiciona o código em um ambiente virtual
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v6.0.2
 
       # Para salvar a imagem em um repositório privado no Github Container Registry é necessário se autenticar através de usuário e senha.
-      - name: Login no Github Container Registry
-        uses: redhat-actions/podman-login@v1.7
+      - name: Log in to the Container registry - Github Container Registry
+        uses: docker/login-action@v3
         # Utiliza o github secrets para mascarar o usuário e senha
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Extrai metadados desta pipeline e os armazena em memória
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
       
       # Criação da imagem docker
-      - name: Build da imagem
-        run: podman build -t ghcr.io${{ github.repository }}:latest
-        # --------------- não precisa -----------------------
-        #uses: docker/build-push-action@v7.1.0
-        #with:
-           # Define o diretório que contém o Dockerfile
-          #context: ./src
-          #file: ./serc/Dockerfile
-          #push: true
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v7.1.0
+        with:
+          # Define o diretório que contém o Dockerfile
+          context: ./src
+          file: ./src/Dockerfile
+          push: true
           # Define o nome da imagem a ser criada
-          #tags: |
-            #ldesordi/live-kube-news:v1
-            #ldesordi/live-kube-news:latest
-        # ----------------------------------------------------
-      - name: Push da imagem para o registry
-        run: podman push ghcr.io/${{ github.repository }}: latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 
   deploy:
-    # Define que o CD só será executado depoi do CI ter finalizado.
+    # Define que o deploy só será executado depois do build e push da imagem ter finalizado.
     meeds: build-and-push
     runs-on: ubuntu-latest
     steps:
-      # Adiciona o código em um ambiente virtual
-      - uses: actions/checkout@v6.0.2
-      - name: Definindo o context
-        uses: ???
-        with: ???
-
-      # Adiciona ao ambiente virtual o acesso ao servidor remoto através de SSH
-      - name: Get SSH key and set permissions
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
-      # Envia o código para o servidor remoto através de SCP que usa SSH
-      - name: Deploy using SCP
-        run: scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa -r ./dist/* ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
-      # Acessa o servidor através de SSH, instala as dependências e reinicia o processo
-        run: scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            # Login no GHCR dentro da VM
+            echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u ${{ github.actor }} --password-stdin
+            
+            # Stop e Remove do container antigo (se existir)
+            podman stop Monolito || true
+            podman rm Monolito || true
+            
+            # Pull da nova imagem
+            podman pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
+            
+            # Rodar o novo container
+            podman run -d \
+              --name Monolito \
+              -p 8000:8000 \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
