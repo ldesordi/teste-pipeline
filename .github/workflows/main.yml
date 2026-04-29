@@ -61,7 +61,7 @@ jobs:
 
   deploy:
     # Define que o deploy só será executado depois do build e push da imagem ter finalizado.
-    meeds: build-and-push
+    needs: build-and-push
     runs-on: ubuntu-latest
     steps:
       - name: Deploy via SSH
