@@ -46,7 +46,17 @@ jobs:
     meeds: [CI]
     runs-on: ubuntu-latest
     steps:
+      # Adiciona o código em um ambiente virtual
       - uses: actions/checkout@v6.0.2
       - name: Definindo o context
         uses: ???
         with: ???
+
+      # Adiciona ao ambiente virtual o acesso ao servidor remoto através de SSH
+      - name: Get SSH key and set permissions
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+      # Envia o código para o servidor remoto através de SCP que usa SSH
+      - name: Deploy using SCP
+        run: scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa -r ./dist/* ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
