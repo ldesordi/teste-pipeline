@@ -1,22 +1,26 @@
 # Arquivo que define a pipeline de CI-CD
 
+# Define o nome do workflow
 name: CI-CD
 
-# Define o evento que deve disparar a pipeline. Um commit na branch main irá disparar esta pipeline.
+# Define o evento que deve acountecer para iniciar esta pipeline.
 on: 
+  # O push define que um commit na branch main irá iniciar esta pipeline.
   push: 
     branches: ["main"]
 
+# Define as tarefas do workflow
 jobs:
   CI:
-    # Define o runner
+    # Define o sistema operacional onde o job deve ser executado.
     runs-on: ubuntu-latest
 
+    # Define as etapas de cada job.
     steps:
-      # ???
+      # Adiciona o código em um ambiente virtual
       - uses: actions/checkout@v6.0.2
 
-      # Para subir a imagem para o Docker Hub é necessário definir um usuário.
+      # Para salvar a imagem em um repositório privado no Docker Hub é necessário se autenticar através de usuário e senha.
       - name: Autenticação no Docker Hub
         uses: docker/login-action@v4.1.0
         # Utiliza o github secrets para mascarar o usuário e senha
@@ -36,4 +40,13 @@ jobs:
           tags: |
             ldesordi/live-kube-news:v1
             ldesordi/live-kube-news:latest
-      
+
+  CD:
+    # Define que o CD só será executado depoi do CI ter finalizado.
+    meeds: [CI]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+      - name: Definindo o context
+        uses: ???
+        with: ???
